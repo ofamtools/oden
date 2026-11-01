@@ -24,16 +24,34 @@ outer shell of [ochazuke](https://github.com/ofamtools/ochazuke) apps,
 of [matomeru](https://github.com/ofamtools/matomeru)'s `mtm` and of the
 family's `o-*` tools ([below](#in-the-family)).
 
-## Install
+## Install the `o` command
+
+`o` is the o-family's root command, and it lives in this repository:
+
+```sh
+go install ofam.dev/oden/cmd/o@latest
+```
+
+With it installed you don't need the dash: `o NAME ARGS...` runs the
+`o-NAME` executable on your PATH with every argument passed through, so
+`o gh` runs `o-gh`, `o md plan.md` runs `o-md plan.md` and `o lane ...`
+runs `o-lane ...`. Install a tool the same way, then run it through `o`:
+
+```sh
+go install ofam.dev/o-gh@latest
+o gh
+```
+
+`o` scans every PATH directory for `o-*` executables, and any word may be
+shortened to a unique prefix (`o la` runs `o-lane` when nothing else starts
+with `la`). `o` with no arguments, or `o help`, lists the tools it found
+beside its builtins; `o which gh` prints what a word resolves to. See
+[The `o` root](#the-o-root) for the full rule.
+
+## Install the library
 
 ```sh
 go get ofam.dev/oden@latest
-```
-
-The family root bin, `o`, is in this repository too:
-
-```sh
-go build -o ~/bin/o ./cmd/o
 ```
 
 ## Usage
@@ -548,7 +566,7 @@ TUI host, nabe, is installed as both `o-nabe` and `o-tui`:
 | `o proj new x` | external `o-proj new x` (`ODEN_PARENT=o`) |
 | `o pr new x` | the same, by unique prefix |
 
-Install: `go build -o ~/bin/o ./cmd/o`. Another app shares the family's
+Install: `go install ofam.dev/oden/cmd/o@latest`, or `go build -o ~/bin/o ./cmd/o` from a checkout. Another app shares the family's
 tools with `WithPrefixes("o")`, as `mtm` does (`mtm ai` runs `o-ai`).
 
 ### TUI mode and ochazuke

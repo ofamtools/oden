@@ -2,8 +2,7 @@
 """Write oden's logo set: assets/icon.svg, assets/logo-light.svg and
 assets/logo-dark.svg.
 
-The mark is the Kushi (concept oden-1 in ~/hub/o-plans/icons/build.py, whose
-drawing code this copies): konnyaku, daikon and chikuwa on one bamboo skewer,
+The mark is the Kushi: konnyaku, daikon and chikuwa on one bamboo skewer,
 as subcommands sit on one bin. The set follows ochazuke's and matomeru's
 assets/: a 128x128 icon on a rounded tile (rx 28) in a dark tint of the
 tool's hue, and a logo of the untiled mark beside the name in the family's

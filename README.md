@@ -556,13 +556,11 @@ the layers above it are ordinary consumers:
 
 `cmd/o` is the family root bin (oden, ochazuke): an oden app named `o` with
 the builtins and nothing else built in. Every word follows the normal rule,
-so a tool joins the family by installing as `o-<tool>`; by convention the
-TUI host, nabe, is installed as both `o-nabe` and `o-tui`:
+so a tool joins the family by installing as `o-<tool>`:
 
 | Word | Resolves to, highest first |
 |---|---|
 | `o help`, `o info [W]`, `o version`, `o which W`; `o commands`, `o catalog`, `o state`, `o command list\|show\|state` | inline builtins; first group human-facing, second group JSON-first |
-| `o tui ARGS`, `o nabe ARGS` | external `o-tui` / `o-nabe` (nabe) |
 | `o proj new x` | external `o-proj new x` (`ODEN_PARENT=o`) |
 | `o pr new x` | the same, by unique prefix |
 

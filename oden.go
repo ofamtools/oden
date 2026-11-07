@@ -30,6 +30,10 @@ type Command struct {
 	Summary  string
 	Category string   // optional listing group
 	Audience Audience // empty defaults to human; overrides inherit a builtin's audience
+	// Yield makes the command give way, when its name is typed exactly, to
+	// the app's fallback if App.Claims claims the whole argv. The machine
+	// builtins set it; see WithClaims.
+	Yield bool
 	// Children makes this a command group. A non-nil empty slice is an
 	// empty group; nil leaves Run/Handle in control of the arguments.
 	Children   []Command
@@ -55,6 +59,11 @@ type App struct {
 	// Stderr and Run exits 1. Default returns ErrNotFound to hand an
 	// unknown word back to Run, which then reports it as NotFound does.
 	Default func(ctx context.Context, args []string) error
+
+	// Claims (WithClaims) says whether the fallback resolves args, the
+	// whole argv. It is asked only when the first word exactly names a
+	// Yield command; true runs the fallback instead of that command.
+	Claims func(args []string) bool
 
 	Path func() string // the PATH list; nil reads $PATH
 	FS   FS            // nil is OS
@@ -126,6 +135,18 @@ func WithCategories(categories map[string]string) Option {
 // WithDefault sets the handler for no command word or an unknown one.
 func WithDefault(run func(ctx context.Context, args []string) error) Option {
 	return func(a *App) { a.Default = run }
+}
+
+// WithClaims lets the app's fallback win over the commands marked Yield
+// (the machine builtins state, catalog, commands, command) when the first
+// word names one exactly and claims(args) is true for the whole argv, so a
+// bin can read "state" as a verb without the builtin catching it. Without
+// a claim, or when claims returns false, the command runs as before. Human
+// builtins, app commands, prefix matches and the descendant rule are
+// unaffected. claims must be a cheap predicate; the fallback itself (Default)
+// runs once, afterwards, and sees the same args.
+func WithClaims(claims func(args []string) bool) Option {
+	return func(a *App) { a.Claims = claims }
 }
 
 // Child is the App for parent's command sub: named <parent>-<sub>, so its
@@ -285,6 +306,9 @@ func (a *App) Run(ctx context.Context) error {
 		// An exact inline or PATH word outranks every merged subcommand:
 		// run it without asking the external.
 		if e := a.baseCatalog().Lookup(a.Args[0]); e != nil {
+			if a.yields(e) {
+				return a.fallback(ctx, a.Args[0])
+			}
 			return a.RunEntry(ctx, e, a.Args[1:])
 		}
 	}
@@ -297,7 +321,17 @@ func (a *App) Run(ctx context.Context) error {
 	case !res.Resolved():
 		return a.fallback(ctx, res.Query)
 	}
+	if res.Exact && a.yields(res.Entry) {
+		return a.fallback(ctx, res.Query)
+	}
 	return a.RunEntry(ctx, res.Entry, a.Args[1:])
+}
+
+// yields reports whether e is an inline Yield command that the app's
+// Claims takes over for the current argv.
+func (a *App) yields(e *Entry) bool {
+	return a.Claims != nil && e.Kind == KindInline && e.Command != nil && e.Command.Yield &&
+		e.Sub == "" && a.Claims(a.Args)
 }
 
 func (a *App) fallback(ctx context.Context, word string) error {

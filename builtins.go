@@ -11,7 +11,8 @@ import (
 // WithBuiltins adds human-facing help, info, version and which, and machine-facing
 // commands, catalog, state and command list|show|state. Machine commands
 // retain their JSON formats and argument handling. An app's own command
-// always owns its name over a builtin.
+// always owns its name over a builtin. The machine commands yield to
+// the app's fallback when WithClaims claims the argv.
 func WithBuiltins() Option {
 	return func(a *App) {
 		cmds := builtins(a)
@@ -86,16 +87,16 @@ func builtins(a *App) []Command {
 			}
 			return err
 		}},
-		{Name: "commands", Audience: AudienceMachine, Summary: "print the command registry as JSON", Run: func(context.Context, []string) error {
+		{Name: "commands", Audience: AudienceMachine, Yield: true, Summary: "print the command registry as JSON", Run: func(context.Context, []string) error {
 			return a.writeJSON(a.Catalog().Entries)
 		}},
-		{Name: "catalog", Audience: AudienceMachine, Summary: "print the catalog answer (schema 1) as JSON", Run: func(context.Context, []string) error {
+		{Name: "catalog", Audience: AudienceMachine, Yield: true, Summary: "print the catalog answer (schema 1) as JSON", Run: func(context.Context, []string) error {
 			return a.WriteCatalog(a.Stdout)
 		}},
-		{Name: "state", Audience: AudienceMachine, Summary: "print command rows as JSON Lines", Run: func(context.Context, []string) error {
+		{Name: "state", Audience: AudienceMachine, Yield: true, Summary: "print command rows as JSON Lines", Run: func(context.Context, []string) error {
 			return a.WriteState(a.Stdout)
 		}},
-		{Name: CommandNoun, Audience: AudienceMachine, Summary: "list, show or stream command rows as JSON", Run: func(_ context.Context, args []string) error {
+		{Name: CommandNoun, Audience: AudienceMachine, Yield: true, Summary: "list, show or stream command rows as JSON", Run: func(_ context.Context, args []string) error {
 			usage := fmt.Errorf("usage: %s %s list|show NAME|state", a.Name, CommandNoun)
 			if len(args) == 0 {
 				return usage

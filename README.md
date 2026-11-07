@@ -358,6 +358,19 @@ as above. A `Default` that only wants the no-word case (a TUI) returns
 were no `Default`. An ambiguous word prints the candidates to stderr and
 exits 1, even with a `Default`.
 
+**Yielding builtins.** The machine builtins (`state`, `catalog`, `commands`,
+`command`) are marked `Yield`. With `oden.WithClaims(func(args []string) bool)`
+(or `App.Claims`), when the first word exactly names a `Yield` command and
+`claims(args)` is true for the whole argv, the fallback (`Default`, else the
+not-found report) runs instead, so a bin whose `Default` reads a first word
+as a verb (`o-lane state` meaning noun `lane`, verb `state`) is not caught by
+the builtin. Claims is a predicate only; `Default` runs once, afterwards.
+Without a claim the builtin runs as before, so the machine commands stay
+reachable whenever the app does not take the word. Human builtins (`help`,
+`info`, `version`, `which`), app commands, prefix matches and the descendant
+rule never yield. oden has no separate namespace for builtins (no
+`oden.state`); `Command.Yield` is data an app may set on its own commands too.
+
 **Nesting.** `oden.Child(app, "ai", args)` is the App named `mtm-ai`, so it
 resolves `mtm-ai-skills`; an external `mtm-ai` that is itself an oden app
 gets its root from `ODEN_ROOT`. `mtm ai skills` → `mtm-ai skills` →
@@ -481,6 +494,7 @@ type Option func(*App)
 func New(name string, args []string, opts ...Option) *App
 func WithBuiltins() Option
 func WithDefault(run func(context.Context, []string) error) Option
+func WithClaims(claims func(args []string) bool) Option
 func WithPrefixes(names ...string) Option
 func WithCategories(categories map[string]string) Option
 func WithPath(path string) Option
@@ -526,9 +540,9 @@ Exported data types and values:
 
 | Name | Consumer-facing data |
 |---|---|
-| `Command` | `Name`, `Aliases`, `Summary`, `Category`, `Audience`, `Children`, `Usage`, `Details`, `Parameters`, legacy `Run`, `Handle`, `Source` |
+| `Command` | `Name`, `Aliases`, `Summary`, `Category`, `Audience`, `Yield`, `Children`, `Usage`, `Details`, `Parameters`, legacy `Run`, `Handle`, `Source` |
 | `Parameter` | `Name`, `Type`, `Description`, `Required`, `Choices`, `Source`, `Free` |
-| `App` | `Name`, `Root`, `Args`, `Default`, `Path`, `FS`, `Env`, `Prefixes`, `Stdin`, `Stdout`, `Stderr`, `HelpText` |
+| `App` | `Name`, `Root`, `Args`, `Default`, `Claims`, `Path`, `FS`, `Env`, `Prefixes`, `Stdin`, `Stdout`, `Stderr`, `HelpText` |
 | `Catalog` | `Bin`, sorted `Entries` |
 | `Entry` | `Name`, `Kind`, `Aliases`, `Summary`, `Source`, `Prefix`, `Shadowed`, `Sub` (a merged external's subcommand), `Command`, `Path` |
 | `Claim` | `Name`, `Kind`, `Source`, `AliasOf`, `Merged` |

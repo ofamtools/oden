@@ -196,3 +196,28 @@ func TestDiscoverFakeFSIsNeverCached(t *testing.T) {
 		t.Fatalf("fake FS went through the cache: %d", n)
 	}
 }
+
+type keyedFS struct {
+	FS
+	key string
+}
+
+func (k keyedFS) DiscoverCacheKey() string { return k.key }
+
+func TestDiscoverCachedFSKeysSeparateEntries(t *testing.T) {
+	c := newCacheEnv(t)
+	forgetMemo()
+	c.add(t, "tb-one")
+	bins := []string{"tb"}
+	DiscoverAll(bins, c.bin, keyedFS{OS, "a"})
+	DiscoverAll(bins, c.bin, keyedFS{OS, "a"})
+	DiscoverAll(bins, c.bin, keyedFS{OS, "b"})
+	if n := c.scans.Load(); n != 2 {
+		t.Fatalf("scans = %d, want 2 (one per key)", n)
+	}
+	DiscoverAll(bins, c.bin, keyedFS{OS, ""})
+	DiscoverAll(bins, c.bin, keyedFS{OS, ""})
+	if n := c.scans.Load(); n != 2 {
+		t.Fatalf("empty key must bypass the cache: %d", n)
+	}
+}

@@ -41,7 +41,18 @@ var (
 	cacheDir = defaultCacheDir
 )
 
-func cacheKey(bins []string, path string) string {
+// cacheKeyOf is the cache key part of fsys, or false when fsys is not the
+// real disk.
+func cacheKeyOf(fsys FS) (string, bool) {
+	c, ok := fsys.(CachedFS)
+	if !ok {
+		return "", false
+	}
+	k := c.DiscoverCacheKey()
+	return k, k != ""
+}
+
+func cacheKey(fsKey string, bins []string, path string) string {
 	// A relative PATH entry (an empty one is ".") means a different
 	// directory in each working directory.
 	cwd := ""
@@ -51,7 +62,7 @@ func cacheKey(bins []string, path string) string {
 			break
 		}
 	}
-	sum := sha256.Sum256([]byte(strings.Join(bins, "\x00") + "\x01" + path + "\x01" + cwd))
+	sum := sha256.Sum256([]byte(fsKey + "\x01" + strings.Join(bins, "\x00") + "\x01" + path + "\x01" + cwd))
 	return hex.EncodeToString(sum[:])
 }
 
@@ -98,8 +109,8 @@ func valid(e cacheEntry, stamp []string) bool {
 	return sameStamps(e.Stamps, stamp) && stillExecutable(e)
 }
 
-func cachedDiscoverAll(bins []string, path string) (found, shadowed []External) {
-	key := cacheKey(bins, path)
+func cachedDiscoverAll(bins []string, path, fsKey string, fsys FS) (found, shadowed []External) {
+	key := cacheKey(fsKey, bins, path)
 	stamp := stamps(path)
 
 	memoMu.Lock()
@@ -119,7 +130,7 @@ func cachedDiscoverAll(bins []string, path string) (found, shadowed []External) 
 		}
 	}
 
-	found, shadowed = scanner(bins, path, OS)
+	found, shadowed = scanner(bins, path, fsys)
 	e = cacheEntry{Key: key, Stamps: stamp, Found: found, Shadowed: shadowed}
 	memoMu.Lock()
 	memo[key] = e

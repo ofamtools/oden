@@ -15,7 +15,18 @@ type FS interface {
 	Stat(path string) (fs.FileInfo, error)
 }
 
+// CachedFS is an FS that reads the real disk, perhaps leaving some names
+// out, and so lets discovery remember its results. DiscoverCacheKey names
+// what it leaves out (any stable text, equal for equal filtering); a
+// different key is a different cache entry. An empty key opts out.
+type CachedFS interface {
+	FS
+	DiscoverCacheKey() string
+}
+
 type osFS struct{}
+
+func (osFS) DiscoverCacheKey() string { return "os" }
 
 func (osFS) ReadDir(dir string) ([]fs.DirEntry, error) { return os.ReadDir(dir) }
 func (osFS) Stat(path string) (fs.FileInfo, error)     { return os.Stat(path) }
@@ -89,14 +100,15 @@ func Discover(bin, path string, fsys FS) (found, shadowed []External) {
 // first, then every <extra>-<sub> per extra prefix, in the given order.
 // A sub already found under an earlier prefix shadows the later ones.
 //
-// With the real file system (OS) the result is remembered: in memory for
-// the rest of the process, and on disk across processes (discover_cache.go),
-// each checked against the modification time of every PATH directory, so
-// a binary added to or removed from one is seen at once. A fake FS is
-// never cached.
+// With the real file system (OS), or an FS that says it reads it
+// (CachedFS), the result is remembered: in memory for the rest of the
+// process, and on disk across processes (discover_cache.go), each checked
+// against the modification time of every PATH directory, so a binary added
+// to or removed from one is seen at once. Any other FS (a fake) is never
+// cached.
 func DiscoverAll(bins []string, path string, fsys FS) (found, shadowed []External) {
-	if fsys == OS {
-		return cachedDiscoverAll(bins, path)
+	if key, ok := cacheKeyOf(fsys); ok {
+		return cachedDiscoverAll(bins, path, key, fsys)
 	}
 	return scanDiscoverAll(bins, path, fsys)
 }

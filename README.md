@@ -262,7 +262,10 @@ or a link to one, with an executable bit; directories and non-executables
 are skipped. The first `<bin>-<sub>` on PATH wins; later ones are recorded as
 shadowed. Discovery runs once, on first use, and is cached until the next
 `Add` or `Cmd`. The PATH list and the file system are injectable (`WithPath`,
-`WithFS`).
+`WithFS`). On the real file system the result is also remembered across
+apps and processes (`$XDG_CACHE_HOME/oden/discover.json`, checked against each
+PATH directory's modification time); `ODEN_DISCOVER_CACHE=off` turns the disk
+part off.
 
 **Extra prefixes** (opt-in, `WithPrefixes("o")`): more bin names whose
 `<name>-<sub>` executables are also this bin's commands, discovered after

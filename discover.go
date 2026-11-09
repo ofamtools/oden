@@ -88,7 +88,21 @@ func Discover(bin, path string, fsys FS) (found, shadowed []External) {
 // DiscoverAll discovers each prefix in turn: every <bin>-<sub> on PATH
 // first, then every <extra>-<sub> per extra prefix, in the given order.
 // A sub already found under an earlier prefix shadows the later ones.
+//
+// With the real file system (OS) the result is remembered: in memory for
+// the rest of the process, and on disk across processes (discover_cache.go),
+// each checked against the modification time of every PATH directory, so
+// a binary added to or removed from one is seen at once. A fake FS is
+// never cached.
 func DiscoverAll(bins []string, path string, fsys FS) (found, shadowed []External) {
+	if fsys == OS {
+		return cachedDiscoverAll(bins, path)
+	}
+	return scanDiscoverAll(bins, path, fsys)
+}
+
+// scanDiscoverAll is DiscoverAll without any cache: it reads the disk.
+func scanDiscoverAll(bins []string, path string, fsys FS) (found, shadowed []External) {
 	taken := map[string]bool{}
 	for _, bin := range bins {
 		f, s := Discover(bin, path, fsys)

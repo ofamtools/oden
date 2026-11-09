@@ -18,6 +18,7 @@ Keep planning work in the family planning workspace, separate from this reposito
 | `Handler`, `Ctx`, `App.Cmd`, input helpers and `Ctx.Sub` | `handler.go` |
 | `Catalog`, `Entry`, `Claim`, ownership and shadowing, `Resolve` | `catalog.go` |
 | PATH scan, `FS`, `Discover`, `DiscoverAll` (extra prefixes), `Executable` | `discover.go` |
+| Discovery memo and disk cache (PATH dir mtimes) | `discover_cache.go` |
 | The `o` root bin (builtins + `o-<tool>`) | `cmd/o` |
 | Merging a command group with the same-named external (probe, cache) | `merge.go` |
 | Help listing | `help.go` |

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
+	"slices"
 	"strings"
 )
 
@@ -25,13 +26,21 @@ func WithBuiltins() Option {
 
 func builtins(a *App) []Command {
 	return []Command{
-		{Name: "help", Aliases: []string{"-h", "--help"}, Summary: "list the commands by audience", Run: func(ctx context.Context, args []string) error {
+		{Name: "help", Aliases: []string{"-h", "--help"}, Summary: "list the commands by audience (--all: every command, namespace members and hidden ones too)", Run: func(ctx context.Context, args []string) error {
+			all := false
+			if i := slices.Index(args, "--all"); i >= 0 {
+				all, args = true, slices.Delete(slices.Clone(args), i, i+1)
+			}
 			if len(args) != 0 && !(len(args) == 1 && (helpFlag(args[0]) || args[0] == "help")) {
 				res := a.Catalog().Resolve(args[0])
 				if !res.Resolved() || res.Entry.Name == "help" {
 					return &ExitError{Code: 1, Err: fmt.Errorf("%s: unknown or ambiguous command %q", a.helpName(), args[0])}
 				}
 				return a.RunEntry(ctx, res.Entry, append(args[1:], "--help"))
+			}
+			if all {
+				a.HelpAll(a.Stdout)
+				return nil
 			}
 			a.Help(a.Stdout)
 			return nil

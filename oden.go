@@ -30,6 +30,16 @@ type Command struct {
 	Summary  string
 	Category string   // optional listing group
 	Audience Audience // empty defaults to human; overrides inherit a builtin's audience
+	// Namespace names the namespace a command belongs to when it is not
+	// the bin's own ("" is the bin's own). Default help (Help) lists one
+	// line per namespace instead of its members; HelpAll lists every
+	// member. NamespaceHead marks the command that stands for the
+	// namespace itself (its group): its names and summary are the line.
+	Namespace     string
+	NamespaceHead bool
+	// Hidden keeps an internal command out of default help (HelpAll lists
+	// it); it still resolves and runs.
+	Hidden bool
 	// Yield makes the command give way, when its name is typed exactly, to
 	// the app's fallback if App.Claims claims the whole argv. The machine
 	// builtins set it; see WithClaims.
@@ -77,6 +87,9 @@ type App struct {
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 	HelpText       string // optional application notes appended to help
+	// HelpBrief, when set, replaces HelpText in default help (Help); the
+	// full HelpText is in HelpAll and in a command's own help.
+	HelpBrief string
 
 	commands   []*Command
 	catalog    *Catalog
@@ -157,7 +170,8 @@ func Child(parent *App, sub string, args []string) *App {
 		Name: parent.Name + "-" + sub, Root: parent.RootName(), Args: args,
 		Path: parent.Path, FS: parent.FS, Env: parent.Env,
 		Stdin: parent.Stdin, Stdout: parent.Stdout, Stderr: parent.Stderr,
-		HelpText: parent.HelpText,
+		HelpText:  parent.HelpText,
+		HelpBrief: parent.HelpBrief,
 	}
 }
 

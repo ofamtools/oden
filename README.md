@@ -186,6 +186,15 @@ registered; `Choices`, `Source`, and `Free` describe accepted values. These
 fields are display metadata: oden does not parse or validate application flags.
 Existing leaf handlers without help metadata retain ownership of their arguments.
 
+Default help (`BIN`, `-h`, `--help`, `help`) lists the bin's own commands. A
+command with `Namespace` set belongs to a namespace that is not the bin's own;
+the namespace is one line (the `NamespaceHead` command's names and summary, else
+a member count) saying `BIN help --all` or `BIN NS` lists it. `Hidden` commands
+and shadow lines for namespace members are left out, and `App.HelpBrief`
+replaces `HelpText` in that listing. `BIN help --all` (or `-h --all`,
+`--help --all`, `App.HelpAll`) lists everything. `commands`, `catalog` and
+`state` are unchanged.
+
 ### One oden bin delegates to another
 
 [`examples/delegation.go`](examples/delegation.go) contains runnable apps

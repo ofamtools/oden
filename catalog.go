@@ -33,6 +33,8 @@ type Claim struct {
 	// Merged marks the external a command group merges: its subcommands
 	// join the group's children (see App.RunEntry).
 	Merged bool `json:"merged,omitempty"`
+
+	builtin bool // the losing claim is an opt-in builtin (WithBuiltins)
 }
 
 // Audience identifies a command's intended consumer, independently of its
@@ -102,7 +104,7 @@ func NewCatalog(bin string, inline []*Command, externals, shadowedExternals []Ex
 	byName := map[string]*Entry{}
 	for _, cmd := range inline {
 		if w := byName[cmd.Name]; w != nil {
-			w.Shadowed = append(w.Shadowed, Claim{Name: cmd.Name, Kind: KindInline, Source: cmd.Source})
+			w.Shadowed = append(w.Shadowed, Claim{Name: cmd.Name, Kind: KindInline, Source: cmd.Source, builtin: cmd.builtin})
 			if cmd.builtin && w.Audience == "" {
 				w.Audience = cmd.Audience
 			}

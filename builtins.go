@@ -26,7 +26,7 @@ func WithBuiltins() Option {
 
 func builtins(a *App) []Command {
 	return []Command{
-		{Name: "help", Aliases: []string{"-h", "--help"}, Summary: "list the commands by audience (--all: every command, namespace members and hidden ones too)", Run: func(ctx context.Context, args []string) error {
+		{Name: "help", Aliases: []string{"-h", "--help"}, Summary: "list the commands by audience (--all: every one)", Run: func(ctx context.Context, args []string) error {
 			all := false
 			if i := slices.Index(args, "--all"); i >= 0 {
 				all, args = true, slices.Delete(slices.Clone(args), i, i+1)

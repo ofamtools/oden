@@ -83,3 +83,17 @@ func TestHiddenAndNamespaceRowsStayInMachineOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestReplacedBuiltinClaimIsOnlyInHelpAll(t *testing.T) {
+	app, out, _ := testApp(t, fakeFS{}, "", WithBuiltins())
+	app.Add(Command{Name: "catalog", Summary: "mine", Run: noop})
+	app.Help(out)
+	if strings.Contains(out.String(), "shadows") {
+		t.Fatalf("default help:\n%s", out)
+	}
+	out.Reset()
+	app.HelpAll(out)
+	if !strings.Contains(out.String(), "shadows inline") {
+		t.Fatalf("help --all:\n%s", out)
+	}
+}

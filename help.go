@@ -286,8 +286,12 @@ func (a *App) listEntries(w io.Writer, entries []*Entry, claims bool) {
 }
 
 // claimIsNamespaced reports whether a shadowed alias claim is on a
-// command of a namespace or a hidden one.
+// command of a namespace or a hidden one, or a builtin that an app command
+// replaced.
 func (a *App) claimIsNamespaced(c Claim) bool {
+	if c.builtin {
+		return true
+	}
 	if c.AliasOf == "" {
 		return false
 	}

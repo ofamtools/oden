@@ -35,6 +35,8 @@ type Command struct {
 	// line per namespace instead of its members; HelpAll lists every
 	// member. NamespaceHead marks the command that stands for the
 	// namespace itself (its group): its names and summary are the line.
+	// Its alias equal to Namespace outranks a discovered external of that
+	// name, but an exact inline command still wins in either add order.
 	Namespace     string
 	NamespaceHead bool
 	// Hidden keeps an internal command out of default help (HelpAll lists

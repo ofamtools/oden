@@ -1,6 +1,7 @@
 package oden
 
 import (
+	"slices"
 	"sort"
 	"strings"
 )
@@ -87,8 +88,9 @@ func (r Resolution) Resolved() bool { return r.Entry != nil }
 // the externals discovered on PATH. Ownership of a token, highest first:
 //
 //  1. an inline command's name (the first registration wins)
-//  2. an external's name (the first on PATH wins)
-//  3. an inline alias (the first registration wins)
+//  2. a namespace head's alias naming its Namespace (first registration wins)
+//  3. an external's name (the first on PATH wins)
+//  4. an ordinary inline alias (the first registration wins)
 //
 // Every losing claim is kept in the winner's Shadowed list.
 type Catalog struct {
@@ -121,16 +123,37 @@ func NewCatalog(bin string, inline []*Command, externals, shadowedExternals []Ex
 		}
 		byName[cmd.Name] = &Entry{Name: cmd.Name, Kind: KindInline, Aliases: []string{}, Summary: summary, Category: cmd.Category, Audience: cmd.Audience, Source: cmd.Source, Shadowed: []Claim{}, Command: cmd}
 	}
+	// Explicit namespaces own their word over PATH discovery, but never
+	// over an exact inline command added before or after the namespace.
+	for _, cmd := range inline {
+		if !cmd.NamespaceHead || cmd.Namespace == "" || !slices.Contains(cmd.Aliases, cmd.Namespace) {
+			continue
+		}
+		owner := byName[cmd.Name]
+		if owner.Command != cmd || byName[cmd.Namespace] != nil || c.tokens[cmd.Namespace] != nil {
+			continue
+		}
+		owner.Aliases = append(owner.Aliases, cmd.Namespace)
+		c.tokens[cmd.Namespace] = owner
+	}
 	for _, ext := range externals {
-		if w := byName[ext.Name]; w != nil {
-			merged := w.Kind == KindInline && w.Command.Children != nil
+		w := byName[ext.Name]
+		if w == nil {
+			w = c.tokens[ext.Name]
+		}
+		if w != nil {
+			merged := w.Name == ext.Name && w.Kind == KindInline && w.Command.Children != nil
 			w.Shadowed = append(w.Shadowed, Claim{Name: ext.Name, Kind: KindExternal, Source: ext.Path, Merged: merged})
 			continue
 		}
 		byName[ext.Name] = &Entry{Name: ext.Name, Kind: KindExternal, Aliases: []string{}, Source: ext.Path, Prefix: ext.Prefix, Shadowed: []Claim{}, Path: ext.Path}
 	}
 	for _, ext := range shadowedExternals {
-		if w := byName[ext.Name]; w != nil {
+		w := byName[ext.Name]
+		if w == nil {
+			w = c.tokens[ext.Name]
+		}
+		if w != nil {
 			w.Shadowed = append(w.Shadowed, Claim{Name: ext.Name, Kind: KindExternal, Source: ext.Path})
 		}
 	}
@@ -145,6 +168,9 @@ func NewCatalog(bin string, inline []*Command, externals, shadowedExternals []Ex
 			continue
 		}
 		for _, alias := range cmd.Aliases {
+			if cmd.NamespaceHead && alias == cmd.Namespace && c.tokens[alias] == owner {
+				continue // already claimed ahead of externals
+			}
 			if w := c.tokens[alias]; w != nil {
 				w.Shadowed = append(w.Shadowed, Claim{Name: alias, Kind: KindInline, Source: cmd.Source, AliasOf: cmd.Name})
 				continue

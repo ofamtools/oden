@@ -42,8 +42,9 @@ command word is the command's.
   one table; nothing re-derives it.
 - Resolution rules are data, in one place (`Catalog.Resolve` and
   `NewCatalog`): exact name or alias, then unique prefix, outer beats nested;
-  ownership inline name > external > inline alias; first registration and
-  first on PATH win. Never special-case a name to change the order.
+  ownership inline name > namespace-head alias equal to Namespace > external >
+  ordinary inline alias; first registration and first on PATH win. Namespace
+  priority comes from Command metadata, never a branch on a command name.
 - Nothing is shadowed silently: every losing claim is recorded on the winner.
 - A command group merges the same-named external (`Claim.Merged`); the
   external is asked for its subcommands only when that group runs a word

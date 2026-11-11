@@ -288,11 +288,20 @@ across prefixes; a `Child` does not inherit extra prefixes.
 **Ownership** of a token, highest first:
 
 1. an inline command's name (the first registration wins)
-2. an external's name (the first on PATH wins)
-3. an inline alias (the first registration wins)
+2. a namespace head's alias equal to its `Namespace` (the first registration wins)
+3. an external's name (the first on PATH wins)
+4. an ordinary inline alias (the first registration wins)
 
 Every losing claim stays on the winner as a `shadows ...` line in help and in
 `commands --json`, so nothing is hidden silently.
+
+An explicitly registered namespace owns its word over a same-named executable
+discovered on PATH. For example, a `NamespaceHead` named `lab.` with
+`Namespace: "lab"` and alias `lab` keeps `BIN lab record export` inside the
+registered namespace rather than running an unrelated or older `BIN-lab`.
+The external stays shadowed, not merged into the namespace. An exact inline
+command named `lab` still wins whether registered before or after the namespace;
+`lab.` remains available to reach the namespace itself.
 
 **Resolution** of the first word: an exact name or alias, else the one
 command with a name or alias starting with the word (`mtm ta` is `task` when

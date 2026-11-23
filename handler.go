@@ -21,6 +21,7 @@ type Ctx struct {
 	Args           []string
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
+	Picker         PickerFunc
 }
 
 // Cmd registers a handler and records the caller as its source.

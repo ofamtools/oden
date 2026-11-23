@@ -88,7 +88,8 @@ type App struct {
 
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
-	HelpText       string // optional application notes appended to help
+	Picker         PickerFunc // optional interactive TTY picker (WithPicker), inherited by Child/Ctx
+	HelpText       string     // optional application notes appended to help
 	// HelpBrief, when set, replaces HelpText in default help (Help); the
 	// full HelpText is in HelpAll and in a command's own help.
 	HelpBrief string
@@ -132,6 +133,11 @@ func WithStdio(in io.Reader, out, errOut io.Writer) Option {
 	return func(a *App) { a.Stdin, a.Stdout, a.Stderr = in, out, errOut }
 }
 
+// WithPicker sets the interactive TTY picker inherited by Child apps and Ctx.
+func WithPicker(fn PickerFunc) Option {
+	return func(a *App) { a.Picker = fn }
+}
+
 // WithPrefixes adds bin names whose <name>-<sub> executables on PATH are
 // also this bin's commands, discovered after its own <bin>-<sub> and in
 // the given order: with WithPrefixes("o"), mtm ai runs o-ai unless an
@@ -172,6 +178,7 @@ func Child(parent *App, sub string, args []string) *App {
 		Name: parent.Name + "-" + sub, Root: parent.RootName(), Args: args,
 		Path: parent.Path, FS: parent.FS, Env: parent.Env,
 		Stdin: parent.Stdin, Stdout: parent.Stdout, Stderr: parent.Stderr,
+		Picker:    parent.Picker,
 		HelpText:  parent.HelpText,
 		HelpBrief: parent.HelpBrief,
 	}
@@ -394,6 +401,7 @@ func (a *App) RunEntry(ctx context.Context, e *Entry, args []string) error {
 			return e.Command.Handle(&Ctx{
 				Context: ctx, App: a, Name: e.Command.Name, Args: args,
 				Stdin: a.Stdin, Stdout: a.Stdout, Stderr: a.Stderr,
+				Picker: a.Picker,
 			})
 		}
 		return e.Command.Run(ctx, args)

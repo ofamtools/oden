@@ -8,15 +8,50 @@ import (
 	"strings"
 )
 
-// Parameter describes a command argument for help. Oden does not parse it.
+// Parameter describes a command flag/argument for help, machine discovery,
+// and declarative flag parsing (ParseFlags / Ctx.Parse).
 type Parameter struct {
-	Name        string
-	Type        string
-	Description string
-	Required    bool
-	Choices     []string
-	Source      string
-	Free        bool
+	Name        string   `json:"name"`
+	Flag        string   `json:"flag,omitempty"`
+	Short       string   `json:"short,omitempty"`
+	Type        string   `json:"type,omitempty"`
+	Default     string   `json:"default,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Required    bool     `json:"required,omitempty"`
+	Repeatable  bool     `json:"repeatable,omitempty"`
+	Enum        []string `json:"enum,omitempty"`
+	Choices     []string `json:"choices,omitempty"`
+	Source      string   `json:"source,omitempty"`
+	Free        bool     `json:"free,omitempty"`
+}
+
+func (p Parameter) flagName() string {
+	if p.Flag != "" {
+		return strings.TrimLeft(p.Flag, "-")
+	}
+	return p.Name
+}
+
+func (p Parameter) shortName() string {
+	return strings.TrimLeft(p.Short, "-")
+}
+
+func (p Parameter) paramType() string {
+	if p.Type != "" {
+		return p.Type
+	}
+	return "string"
+}
+
+func (p Parameter) allowedValues() []string {
+	if len(p.Enum) != 0 {
+		return p.Enum
+	}
+	return p.Choices
+}
+
+func (p Parameter) isRepeatable() bool {
+	return p.Repeatable || p.Type == "list"
 }
 
 func helpFlag(word string) bool { return word == "-h" || word == "--help" }
@@ -56,24 +91,37 @@ func (a *App) commandHelp(w io.Writer, c *Command) error {
 	if c.Details != "" {
 		fmt.Fprintf(&out, "\n%s\n", c.Details)
 	}
-	writeParameters(&out, c.Parameters, "  ")
+	if len(c.Parameters) != 0 {
+		fmt.Fprintln(&out, "\nFlags:")
+		writeParameters(&out, c.Parameters, "  ")
+	}
 	a.helpNotes(&out)
 	_, err := io.WriteString(w, out.String())
 	return err
 }
 func writeParameters(w io.Writer, parameters []Parameter, indent string) {
 	for _, p := range parameters {
-		required := "optional"
+		attrs := []string{"optional"}
 		if p.Required {
-			required = "required"
+			attrs[0] = "required"
 		}
-		fmt.Fprintf(w, "\n%s--%s <%s> (%s)", indent, p.Name, p.Type, required)
+		if p.isRepeatable() {
+			attrs = append(attrs, "repeatable")
+		}
+		flagLabel := "--" + p.flagName()
+		if s := p.shortName(); s != "" {
+			flagLabel = "-" + s + ", " + flagLabel
+		}
+		fmt.Fprintf(w, "\n%s%s <%s> (%s)", indent, flagLabel, p.paramType(), strings.Join(attrs, ", "))
 		if p.Description != "" {
 			fmt.Fprintf(w, ": %s", p.Description)
 		}
 		fmt.Fprintln(w)
-		if len(p.Choices) != 0 {
-			fmt.Fprintf(w, "%s  choices: %s\n", indent, strings.Join(p.Choices, ", "))
+		if p.Default != "" {
+			fmt.Fprintf(w, "%s  default: %s\n", indent, p.Default)
+		}
+		if vals := p.allowedValues(); len(vals) != 0 {
+			fmt.Fprintf(w, "%s  choices: %s\n", indent, strings.Join(vals, ", "))
 		}
 		if p.Source != "" {
 			fmt.Fprintf(w, "%s  choices from: %s\n", indent, p.Source)

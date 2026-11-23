@@ -64,6 +64,9 @@ type Entry struct {
 	// Path Sub ARGS... (BIN-NAME SUB ARGS...).
 	Sub string `json:"sub,omitempty"`
 
+	Usage      string      `json:"usage,omitempty"`
+	Parameters []Parameter `json:"parameters,omitempty"`
+
 	Command *Command `json:"-"` // set for KindInline
 	Path    string   `json:"-"` // set for KindExternal
 
@@ -121,7 +124,7 @@ func NewCatalog(bin string, inline []*Command, externals, shadowedExternals []Ex
 			sort.Strings(names)
 			summary = strings.Join(names, " ")
 		}
-		byName[cmd.Name] = &Entry{Name: cmd.Name, Kind: KindInline, Aliases: []string{}, Summary: summary, Category: cmd.Category, Audience: cmd.Audience, Source: cmd.Source, Shadowed: []Claim{}, Command: cmd}
+		byName[cmd.Name] = &Entry{Name: cmd.Name, Kind: KindInline, Aliases: []string{}, Summary: summary, Category: cmd.Category, Audience: cmd.Audience, Source: cmd.Source, Shadowed: []Claim{}, Usage: cmd.Usage, Parameters: cmd.Parameters, Command: cmd}
 	}
 	// Explicit namespaces own their word over PATH discovery, but never
 	// over an exact inline command added before or after the namespace.

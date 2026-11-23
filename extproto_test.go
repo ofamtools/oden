@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -134,6 +135,150 @@ func TestAddExtensionProtocolAndBuiltins(t *testing.T) {
 		}
 		if strings.TrimSpace(out) == "" {
 			t.Fatalf("builtin %v produced empty output", builtinArgs)
+		}
+	}
+}
+
+func TestExtProtoDeclarativeWireRoundTrip(t *testing.T) {
+	want := ExtManifest{
+		Name:    "o-demo",
+		Version: "v2.0.0",
+		Schemas: []ExtSchema{
+			{
+				Kind:   "demo.item",
+				Title:  "Item",
+				Plural: "Items",
+				Fields: []ExtField{{Name: "status", Type: "string"}},
+				StyleRules: []ExtStyleRule{
+					{
+						When:     "status == done",
+						Target:   "row",
+						Tone:     "muted",
+						Icon:     "✓",
+						IconTone: "success",
+					},
+					{
+						When:   "status == open",
+						Target: "status",
+						Tone:   "accent",
+					},
+				},
+			},
+			{
+				Kind:   "demo.legacy",
+				Title:  "Legacy",
+				Plural: "Legacies",
+				Fields: []ExtField{{Name: "name", Type: "string"}},
+			},
+		},
+		Commands: []ExtCommand{
+			{
+				ID:          "demo.item.delete",
+				Description: "Delete item",
+				Kinds:       []string{"demo.item"},
+				Tags:        []string{"destructive", "item"},
+				Key:         "D",
+				KeyHint:     "delete item",
+				Exec: &ExtCommandExec{
+					Argv:         []string{"o-demo", "delete", "{{id}}"},
+					Title:        "Delete {{title}}",
+					Dir:          "{{dir}}",
+					Env:          map[string]string{"DEMO_MODE": "strict"},
+					Foreground:   true,
+					RefreshKinds: []string{"demo.item"},
+				},
+				Guard: &ExtCommandGuard{
+					When:          "status != locked",
+					RefuseMessage: "item is locked",
+					HideWhenFalse: true,
+				},
+				Confirm: &ExtCommandConfirm{
+					Title:   "Confirm delete",
+					Message: "Delete {{title}}?",
+					Label:   "Delete",
+					Tone:    "danger",
+				},
+				Feedback: &ExtCommandFeedback{
+					Running: "Deleting...",
+					Success: "Deleted",
+					Failure: "Delete failed",
+				},
+			},
+			{
+				ID:          "demo.item.list",
+				Description: "List items",
+			},
+		},
+	}
+
+	raw, err := json.Marshal(want)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+
+	var got ExtManifest
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatalf("unmarshal manifest: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("round-trip mismatch:\ngot:  %+v\nwant: %+v", got, want)
+	}
+
+	var wire map[string]any
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		t.Fatalf("unmarshal raw wire map: %v", err)
+	}
+
+	schemas := wire["schemas"].([]any)
+	declSchema := schemas[0].(map[string]any)
+	rules := declSchema["styleRules"].([]any)
+	rule0 := rules[0].(map[string]any)
+	for _, k := range []string{"when", "target", "tone", "icon", "iconTone"} {
+		if _, ok := rule0[k]; !ok {
+			t.Errorf("styleRules[0] missing JSON key %q", k)
+		}
+	}
+	legacySchema := schemas[1].(map[string]any)
+	if _, ok := legacySchema["styleRules"]; ok {
+		t.Errorf("legacy schema unexpectedly emitted styleRules: %v", legacySchema)
+	}
+
+	cmds := wire["commands"].([]any)
+	declCmd := cmds[0].(map[string]any)
+	for _, k := range []string{"id", "description", "kinds", "tags", "key", "keyHint", "exec", "guard", "confirm", "feedback"} {
+		if _, ok := declCmd[k]; !ok {
+			t.Errorf("declarative command missing JSON key %q", k)
+		}
+	}
+	execMap := declCmd["exec"].(map[string]any)
+	for _, k := range []string{"argv", "title", "dir", "env", "foreground", "refreshKinds"} {
+		if _, ok := execMap[k]; !ok {
+			t.Errorf("exec missing JSON key %q", k)
+		}
+	}
+	guardMap := declCmd["guard"].(map[string]any)
+	for _, k := range []string{"when", "refuseMessage", "hideWhenFalse"} {
+		if _, ok := guardMap[k]; !ok {
+			t.Errorf("guard missing JSON key %q", k)
+		}
+	}
+	confirmMap := declCmd["confirm"].(map[string]any)
+	for _, k := range []string{"title", "message", "label", "tone"} {
+		if _, ok := confirmMap[k]; !ok {
+			t.Errorf("confirm missing JSON key %q", k)
+		}
+	}
+	feedbackMap := declCmd["feedback"].(map[string]any)
+	for _, k := range []string{"running", "success", "failure"} {
+		if _, ok := feedbackMap[k]; !ok {
+			t.Errorf("feedback missing JSON key %q", k)
+		}
+	}
+
+	legacyCmd := cmds[1].(map[string]any)
+	for _, k := range []string{"kinds", "tags", "key", "keyHint", "exec", "guard", "confirm", "feedback"} {
+		if _, ok := legacyCmd[k]; ok {
+			t.Errorf("legacy command unexpectedly emitted JSON key %q: %v", k, legacyCmd)
 		}
 	}
 }

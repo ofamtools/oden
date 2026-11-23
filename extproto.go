@@ -19,24 +19,78 @@ type ExtField struct {
 	RefKinds    []string `json:"refKinds,omitempty"`
 }
 
+// ExtStyleRule describes a declarative row or cell styling rule on an
+// extension schema.
+type ExtStyleRule struct {
+	When     string `json:"when"`
+	Target   string `json:"target,omitempty"` // "" or "row" for whole-row, or column key
+	Tone     string `json:"tone,omitempty"`
+	Icon     string `json:"icon,omitempty"`
+	IconTone string `json:"iconTone,omitempty"`
+}
+
 // ExtSchema describes one noun schema in an extension manifest.
 type ExtSchema struct {
-	Kind           string     `json:"kind"`
-	Title          string     `json:"title"`
-	Plural         string     `json:"plural"`
-	Fields         []ExtField `json:"fields"`
-	DefaultColumns []string   `json:"defaultColumns,omitempty"`
-	SummaryField   string     `json:"summaryField,omitempty"`
-	UniqueFields   []string   `json:"uniqueFields,omitempty"`
+	Kind           string         `json:"kind"`
+	Title          string         `json:"title"`
+	Plural         string         `json:"plural"`
+	Fields         []ExtField     `json:"fields"`
+	DefaultColumns []string       `json:"defaultColumns,omitempty"`
+	SummaryField   string         `json:"summaryField,omitempty"`
+	UniqueFields   []string       `json:"uniqueFields,omitempty"`
+	StyleRules     []ExtStyleRule `json:"styleRules,omitempty"`
+}
+
+// ExtCommandExec describes a declarative process invocation for an extension
+// command.
+type ExtCommandExec struct {
+	Argv         []string          `json:"argv"`
+	Title        string            `json:"title,omitempty"`
+	Dir          string            `json:"dir,omitempty"`
+	Env          map[string]string `json:"env,omitempty"`
+	Foreground   bool              `json:"foreground,omitempty"`
+	RefreshKinds []string          `json:"refreshKinds,omitempty"`
+}
+
+// ExtCommandGuard describes a declarative precondition for an extension
+// command.
+type ExtCommandGuard struct {
+	When          string `json:"when"`
+	RefuseMessage string `json:"refuseMessage,omitempty"`
+	HideWhenFalse bool   `json:"hideWhenFalse,omitempty"`
+}
+
+// ExtCommandConfirm describes a declarative confirmation prompt for an
+// extension command.
+type ExtCommandConfirm struct {
+	Title   string `json:"title,omitempty"`
+	Message string `json:"message"`
+	Label   string `json:"label,omitempty"`
+	Tone    string `json:"tone,omitempty"`
+}
+
+// ExtCommandFeedback describes declarative status messages for an extension
+// command.
+type ExtCommandFeedback struct {
+	Running string `json:"running,omitempty"`
+	Success string `json:"success,omitempty"`
+	Failure string `json:"failure,omitempty"`
 }
 
 // ExtCommand describes one command entry in an extension manifest.
 type ExtCommand struct {
-	ID          string         `json:"id"`
-	Description string         `json:"description,omitempty"`
-	Params      []ExtField     `json:"params,omitempty"`
-	Tags        []string       `json:"tags,omitempty"`
-	Meta        map[string]any `json:"meta,omitempty"`
+	ID          string              `json:"id"`
+	Description string              `json:"description,omitempty"`
+	Params      []ExtField          `json:"params,omitempty"`
+	Kinds       []string            `json:"kinds,omitempty"`
+	Tags        []string            `json:"tags,omitempty"`
+	Key         string              `json:"key,omitempty"`
+	KeyHint     string              `json:"keyHint,omitempty"`
+	Exec        *ExtCommandExec     `json:"exec,omitempty"`
+	Guard       *ExtCommandGuard    `json:"guard,omitempty"`
+	Confirm     *ExtCommandConfirm  `json:"confirm,omitempty"`
+	Feedback    *ExtCommandFeedback `json:"feedback,omitempty"`
+	Meta        map[string]any      `json:"meta,omitempty"`
 }
 
 // ExtManifest is the wire shape printed by `TOOL catalog` for Matomeru's
